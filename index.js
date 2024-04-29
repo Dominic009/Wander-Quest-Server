@@ -9,8 +9,6 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 app.use(cors());
 app.use(express.json());
 
-// DB_USER = wanderQuest
-// DB_PASS = WndLp0I0444S5WIA
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@domserver.es4znv5.mongodb.net/?retryWrites=true&w=majority&appName=DomServer`;
