@@ -1,82 +1,110 @@
-const express = require('express');
-require('dotenv').config();
-const cors = require('cors');
+const express = require("express");
+require("dotenv").config();
+const cors = require("cors");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+
 const app = express();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // Middleware
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
-});
-
 app.use(cors());
 app.use(express.json());
 
-
-
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@domserver.es4znv5.mongodb.net/?retryWrites=true&w=majority&appName=DomServer`;
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
+// ✅ Create MongoClient without deprecated options
+const client = new MongoClient(process.env.MONGO_URI, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
+  monitorCommands: true,
 });
 
+// ✅ Function to connect and run server
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
-    // Send a ping to confirm a successful connection
+    console.log("Connecting to MongoDB...");
 
-    const spotCollection = client.db('touristSpotDB').collection('spots')
+    // ✅ Ensure MongoDB connection works
+    await client.connect();
+    console.log("✅ Connected to MongoDB successfully!");
 
+    const spotCollection = client.db("touristSpotDB").collection("spots");
 
-    // create
-    app.post('/spot', async(req, res) => {
+    // ✅ Create
+    app.post("/spot", async (req, res) => {
+      try {
         const newSpot = req.body;
         const result = await spotCollection.insertOne(newSpot);
         res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Error adding spot", error });
+      }
     });
 
-    //Read
-    app.get('/spot', async(req, res) => {
-        const cursor = spotCollection.find();
-        const result = await cursor.toArray();
-        res.send(result)
-    })
+    // ✅ Read all spots
+    app.get("/spot", async (req, res) => {
+      try {
+        const result = await spotCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Error retrieving spots", error });
+      }
+    });
 
-    app.get('/spot/:id', async(req, res) => {
-      const id = req.params.id;
-      const query = {_id : new ObjectId(id)}
-      const result = await spotCollection.findOne(query)
-      res.send(result)
-    })
+    // ✅ Read specific spot by ID
+    app.get("/spot/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const result = await spotCollection.findOne({ _id: new ObjectId(id) });
+        if (!result) return res.status(404).send({ message: "Spot not found" });
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Error retrieving spot", error });
+      }
+    });
 
+    // ✅ Delete spot
+    app.delete("/spot/delete/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const result = await spotCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        if (result.deletedCount === 0) {
+          return res.status(404).send({ message: "No spot found to delete" });
+        }
+        res.send({ message: "Entry has been deleted", result });
+      } catch (error) {
+        res.status(500).send({ message: "Error deleting spot", error });
+      }
+    });
 
+    // ✅ Ping MongoDB
+    await client.db("touristSpotDB").command({ ping: 1 });
+    console.log("✅ Pinged MongoDB successfully!");
 
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
+    // ✅ Graceful shutdown
+    process.on("SIGINT", async () => {
+      console.log("Closing MongoDB connection...");
+      await client.close();
+      console.log("MongoDB connection closed. Server shutting down.");
+      process.exit(0);
+    });
+  } catch (err) {
+    console.error("❌ MongoDB Connection Error:", err.message);
+    process.exit(1);
   }
 }
-run().catch(console.dir);
 
+run().catch(console.error);
 
-
-
-app.get('/', (req, res) => {
-    res.send("Server is running for Wander Quest")
+// ✅ Default route
+app.get("/", (req, res) => {
+  res.send("Server is running for Wander Quest");
 });
 
-
+// ✅ Start server
 app.listen(port, () => {
-    console.log(`Server is running on port ${port} for Wander Quest`)
-})
+  console.log(`🚀 Server is running on port ${port} for Wander Quest`);
+});
