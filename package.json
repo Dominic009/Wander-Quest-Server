@@ -17,5 +17,8 @@
     "latest": "^0.2.0",
     "mongodb": "^6.5.0",
     "nodemon": "^3.1.9"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.10"
   }
 }

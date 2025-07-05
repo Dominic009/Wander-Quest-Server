@@ -64,6 +64,25 @@ async function run() {
       }
     });
 
+    //Patch spot
+    app.patch("/spot/edit/:id", async (req, res) => {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      try {
+        const result = await spotCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updateData }
+        );
+        if (result.modifiedCount === 0) {
+          return res.status(404).json({ message: "No changes located" });
+        }
+        res.send(result);
+      } catch (error) {
+        res.status(500).json({ error: "Something went wrong." });
+      }
+    });
+
     // ✅ Delete spot
     app.delete("/spot/delete/:id", async (req, res) => {
       try {
@@ -101,7 +120,7 @@ run().catch(console.error);
 
 // ✅ Default route
 app.get("/", (req, res) => {
-  res.send("Server is running for Wander Quest");
+  res.send("Server is running for Wander Quest :", port);
 });
 
 // ✅ Start server
